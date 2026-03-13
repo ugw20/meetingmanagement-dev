@@ -544,7 +544,12 @@ class MeetingController extends Controller
 
         $user = User::find($validated['minute_taker_id']);
         if ($user) {
-            Mail::to($user->email)->send(new MinuteTakerAssigned($meeting, $user));
+            Mail::to($user->email)->send(new MinuteTakerAssigned(
+                $meeting,
+                $user,
+                auth()->user()->name,
+                auth()->user()->email
+            ));
             
             // Send In-App Database Notification
             $user->notify(new MeetingNotification(
@@ -592,7 +597,12 @@ public function storeActionItem(Request $request, Meeting $meeting)
 
     $user = User::find($validated['assigned_to']);
     if ($user) {
-        Mail::to($user->email)->send(new ActionItemAssigned($actionItem, $user));
+        Mail::to($user->email)->send(new ActionItemAssigned(
+            $actionItem,
+            $user,
+            auth()->user()->name,
+            auth()->user()->email
+        ));
         
         // Send In-App Database Notification
         $user->notify(new MeetingNotification(
@@ -827,7 +837,12 @@ public function runningMeeting(Meeting $meeting)
 
     $user = User::find($validated['action_taker_id']);
     if ($user) {
-        Mail::to($user->email)->send(new ActionTakerAssigned($meeting, $user));
+        Mail::to($user->email)->send(new ActionTakerAssigned(
+            $meeting,
+            $user,
+            auth()->user()->name,
+            auth()->user()->email
+        ));
         
         // Send In-App Database Notification
         $user->notify(new MeetingNotification(
