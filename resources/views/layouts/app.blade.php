@@ -135,6 +135,52 @@
 
             <!-- Right navbar links -->
             <ul class="navbar-nav ml-auto">
+                <!-- Notifications Dropdown Menu -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link" data-toggle="dropdown" href="#">
+                        <i class="far fa-bell"></i>
+                        @if(auth()->user() && auth()->user()->unreadNotifications->count() > 0)
+                            <span class="badge badge-danger navbar-badge">{{ auth()->user()->unreadNotifications->count() }}</span>
+                        @endif
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
+                        @if(auth()->user() && auth()->user()->notifications->count() > 0)
+                            <span class="dropdown-item dropdown-header">{{ auth()->user()->unreadNotifications->count() }} Notifikasi Belum Dibaca</span>
+                            
+                            @if(auth()->user()->unreadNotifications->count() > 0)
+                            <div class="dropdown-divider"></div>
+                            <form action="{{ route('notifications.mark-all-read') }}" method="POST" class="p-2 text-center">
+                                @csrf
+                                <button type="submit" class="btn btn-sm btn-link text-muted"><i class="fas fa-check-double mr-1"></i> Tandai semua dibaca</button>
+                            </form>
+                            @endif
+
+                            <div class="dropdown-divider"></div>
+                            
+                            <div style="max-height: 300px; overflow-y: auto;">
+                                @foreach(auth()->user()->notifications->take(5) as $notification)
+                                    <a href="{{ route('notifications.read', $notification->id) }}" class="dropdown-item {{ $notification->read_at ? 'text-muted' : 'font-weight-bold bg-light' }}" style="white-space: normal;">
+                                        <div class="d-flex align-items-start">
+                                            <i class="fas {{ $notification->data['icon'] ?? 'fa-bell' }} {{ $notification->data['iconColor'] ?? 'text-primary' }} mt-1 mr-2"></i>
+                                            <div>
+                                                <p class="mb-0 text-sm">{{ $notification->data['title'] ?? 'Pemberitahuan' }}</p>
+                                                <p class="text-xs {{ $notification->read_at ? 'text-muted' : 'text-dark' }} mb-1">{{ \Illuminate\Support\Str::limit($notification->data['message'] ?? '', 60) }}</p>
+                                                <p class="text-xs text-muted mb-0"><i class="far fa-clock mr-1"></i> {{ $notification->created_at->diffForHumans() }}</p>
+                                            </div>
+                                        </div>
+                                    </a>
+                                    <div class="dropdown-divider"></div>
+                                @endforeach
+                            </div>
+                            
+                            <a href="{{ route('notifications.index') }}" class="dropdown-item dropdown-footer text-center">Lihat Semua Notifikasi</a>
+                        @else
+                            <span class="dropdown-item dropdown-header">Belum ada notifikasi</span>
+                        @endif
+                    </div>
+                </li>
+
+                <!-- User Profile Dropdown -->
                 <li class="nav-item dropdown">
                     <a class="nav-link" data-toggle="dropdown" href="#">
                         <i class="far fa-user mr-1"></i>

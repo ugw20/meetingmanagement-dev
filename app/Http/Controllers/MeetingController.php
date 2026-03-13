@@ -19,6 +19,7 @@ use App\Mail\MeetingInvitation;
 use App\Mail\MinuteTakerAssigned;
 use App\Mail\ActionTakerAssigned;
 use App\Mail\ActionItemAssigned;
+use App\Notifications\MeetingNotification;
 
 class MeetingController extends Controller
 {
@@ -227,6 +228,15 @@ class MeetingController extends Controller
                 Mail::to($invitedUser->email)
                     ->later(now()->addSeconds($delay), new MeetingInvitation($meeting, $invitedUser, $senderName, $senderEmail));
                 $delay += 20;
+
+                // Send In-App Database Notification
+                $invitedUser->notify(new MeetingNotification(
+                    'Undangan Meeting Baru',
+                    "Anda diundang ke meeting: {$meeting->title}",
+                    route('meetings.show', $meeting),
+                    'fa-calendar-alt',
+                    'text-info'
+                ));
             }
 
             return redirect()->route('meetings.index')
@@ -369,6 +379,15 @@ class MeetingController extends Controller
                     Mail::to($newUser->email)
                         ->later(now()->addSeconds($delay), new MeetingInvitation($meeting, $newUser, $senderName, $senderEmail));
                     $delay += 20;
+
+                    // Send In-App Database Notification
+                    $newUser->notify(new MeetingNotification(
+                        'Undangan Meeting Baru',
+                        "Anda ditambahkan ke meeting: {$meeting->title}",
+                        route('meetings.show', $meeting),
+                        'fa-user-plus',
+                        'text-info'
+                    ));
                 }
             }
 
@@ -526,6 +545,15 @@ class MeetingController extends Controller
         $user = User::find($validated['minute_taker_id']);
         if ($user) {
             Mail::to($user->email)->send(new MinuteTakerAssigned($meeting, $user));
+            
+            // Send In-App Database Notification
+            $user->notify(new MeetingNotification(
+                'Tugas Notulensi',
+                "Anda ditunjuk sebagai penulis notulensi untuk: {$meeting->title}",
+                route('meetings.running', $meeting),
+                'fa-pencil-alt',
+                'text-warning'
+            ));
         }
 
         return redirect()->back()
@@ -565,6 +593,15 @@ public function storeActionItem(Request $request, Meeting $meeting)
     $user = User::find($validated['assigned_to']);
     if ($user) {
         Mail::to($user->email)->send(new ActionItemAssigned($actionItem, $user));
+        
+        // Send In-App Database Notification
+        $user->notify(new MeetingNotification(
+            'Tugas Baru: ' . $actionItem->title,
+            "Anda ditugaskan tindak lanjut dari meeting: {$meeting->title}",
+            route('action-items.show', $actionItem),
+            'fa-tasks',
+            'text-warning'
+        ));
     }
 
     return redirect()->back()
@@ -614,6 +651,47 @@ public function storeActionItem(Request $request, Meeting $meeting)
         }
         
         return Storage::disk('public')->download($file->file_path, $file->file_name);
+    }
+
+    public function previewFile(Meeting $meeting, MeetingFile $file)
+    {
+        $this->checkMeetingAccess($meeting);
+        
+        // Validasi bahwa file ini milik meeting yang dimaksud
+        if ($file->meeting_id !== $meeting->id) {
+            abort(404);
+        }
+        
+        $path = storage_path('app/public/' . $file->file_path);
+        
+        $path = storage_path('app/public/' . $file->file_path);
+        
+        if (!file_exists($path)) {
+            abort(404);
+        }
+
+        $mimeType = $file->file_type;
+        $extension = strtolower(pathinfo($file->file_name, PATHINFO_EXTENSION));
+        
+        // Paksa deteksi ext jika tipe di DB adalah octet-stream atau null
+        if (empty($mimeType) || $mimeType === 'application/octet-stream') {
+            if ($extension === 'pdf') {
+                $mimeType = 'application/pdf';
+            } elseif (in_array($extension, ['jpg', 'jpeg'])) {
+                $mimeType = 'image/jpeg';
+            } elseif (in_array($extension, ['png', 'gif', 'webp'])) {
+                $mimeType = 'image/' . $extension;
+            } else {
+                $mimeType = 'application/octet-stream';
+            }
+        }
+        
+        // Gunakan file_type dari database karena file di disk mungkin tidak punya ekstensi
+        // dan response()->file() dari Laravel akan me-override MIME type menjadi octet-stream
+        return response()->make(file_get_contents($path), 200, [
+            'Content-Type' => $mimeType,
+            'Content-Disposition' => 'inline; filename="' . $file->file_name . '"'
+        ]);
     }
 
     public function deleteFile(Meeting $meeting, MeetingFile $file)
@@ -750,6 +828,15 @@ public function runningMeeting(Meeting $meeting)
     $user = User::find($validated['action_taker_id']);
     if ($user) {
         Mail::to($user->email)->send(new ActionTakerAssigned($meeting, $user));
+        
+        // Send In-App Database Notification
+        $user->notify(new MeetingNotification(
+            'Penulis Tindak Lanjut',
+            "Anda ditunjuk sebagai penulis tindak lanjut meeting: {$meeting->title}",
+            route('meetings.show', $meeting),
+            'fa-clipboard-list',
+            'text-success'
+        ));
     }
 
     return redirect()->back()

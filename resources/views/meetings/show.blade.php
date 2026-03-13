@@ -670,13 +670,17 @@
                                 </div>
                             </div>
                             <div class="ml-2" style="white-space: nowrap;">
-                                <a href="{{ route('meetings.download-file', [$meeting, $file]) }}" 
+                                <a href="{{ route('meetings.files.preview', [$meeting, $file]) }}" target="_blank"
+                                   class="btn btn-info btn-sm mr-1" title="Lihat/Preview">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{{ route('meetings.files.download', [$meeting, $file]) }}" 
                                    class="btn btn-success btn-sm mr-1" title="Download">
                                     <i class="fas fa-download"></i>
                                 </a>
                                 
                                 @if(auth()->user()->isAdmin() || $meeting->organizer_id == auth()->id())
-                                <form action="{{ route('meetings.delete-file', [$meeting, $file]) }}" 
+                                <form action="{{ route('meetings.files.delete', [$meeting, $file]) }}" 
                                       method="POST" class="d-inline">
                                     @csrf
                                     @method('DELETE')
@@ -988,7 +992,7 @@
 </div>
 @endif
 
-@if($meeting->organizer_id == auth()->id())
+@if(auth()->user()->isAdmin() || $meeting->organizer_id == auth()->id())
 <!-- Upload File Modal -->
 <div class="modal fade" id="uploadFileModal" tabindex="-1">
     <div class="modal-dialog">
@@ -1001,7 +1005,7 @@
                     <span>&times;</span>
                 </button>
             </div>
-            <form action="{{ route('meetings.upload-file', $meeting) }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ route('meetings.files.upload', $meeting) }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <div class="modal-body">
                     <div class="form-group">

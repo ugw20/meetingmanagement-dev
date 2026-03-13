@@ -31,9 +31,6 @@ Route::middleware(['auth'])->group(function () {
 
     // Meetings
     Route::resource('meetings', MeetingController::class);
-    Route::post('/meetings/{meeting}/upload-file', [MeetingController::class, 'uploadFile'])->name('meetings.upload-file');
-    Route::get('/meetings/{meeting}/download-file/{file}', [MeetingController::class, 'downloadFile'])->name('meetings.download-file');
-    Route::delete('/meetings/{meeting}/delete-file/{file}', [MeetingController::class, 'deleteFile'])->name('meetings.delete-file');
     
     // Meeting Actions
     Route::post('/meetings/{meeting}/start', [MeetingController::class, 'startMeeting'])->name('meetings.start');
@@ -65,6 +62,7 @@ Route::post('/meetings/{meeting}/agendas/{agenda}/complete', [MeetingController:
     // File Routes
 Route::post('/meetings/{meeting}/files/upload', [MeetingController::class, 'uploadFile'])->name('meetings.files.upload');
 Route::get('/meetings/{meeting}/files/{file}/download', [MeetingController::class, 'downloadFile'])->name('meetings.files.download');
+Route::get('/meetings/{meeting}/files/{file}/preview', [MeetingController::class, 'previewFile'])->name('meetings.files.preview');
 Route::delete('/meetings/{meeting}/files/{file}/delete', [MeetingController::class, 'deleteFile'])->name('meetings.files.delete');
 
     // TAMBAHAN ROUTES UNTUK ACTION ITEMS DARI MEETING
@@ -88,6 +86,7 @@ Route::delete('/meetings/{meeting}/files/{file}/delete', [MeetingController::cla
 
     Route::post('/action-items/{actionItem}/upload-file', [ActionItemController::class, 'uploadFile'])->name('action-items.upload-file');
     Route::get('/action-items/{actionItem}/download-file/{file}', [ActionItemController::class, 'downloadFile'])->name('action-items.download-file');
+    Route::get('/action-items/{actionItem}/preview-file/{file}', [ActionItemController::class, 'previewFile'])->name('action-items.preview-file');
     Route::delete('/action-items/{actionItem}/delete-file/{file}', [ActionItemController::class, 'deleteFile'])->name('action-items.delete-file');
 
     Route::post('/meetings/{meeting}/assign-action-taker', [MeetingController::class, 'assignActionTaker'])
@@ -138,6 +137,11 @@ Route::get('/test-agenda', function() {
 
     return "Meeting created with " . $meeting->agendas->count() . " agendas";
 });
+
+    // Notifications
+    Route::get('/notifications', [\App\Http\Controllers\NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications/{id}/read', [\App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::post('/notifications/mark-all-read', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
 
     // Admin only routes
     Route::middleware(['role:admin'])->group(function () {

@@ -383,9 +383,9 @@
                     </td>
                     <td>
                         <!-- TAMBAHKAN TOMBOL HAPUS -->
-                        <div class="btn-group btn-group-sm">
+                        <div class="d-flex align-items-center">
                             <a href="{{ route('action-items.show', $actionItem) }}" 
-                               class="btn btn-info" 
+                               class="btn btn-info btn-sm mr-1" 
                                title="Lihat Detail">
                                 <i class="fas fa-eye"></i>
                             </a>
@@ -400,7 +400,7 @@
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" 
-                                        class="btn btn-danger" 
+                                        class="btn btn-danger btn-sm" 
                                         title="Hapus Tindak Lanjut">
                                     <i class="fas fa-trash"></i>
                                 </button>
@@ -483,13 +483,17 @@
                                         </div>
                                     </div>
                                     <div class="btn-group">
-                                        <a href="{{ route('meetings.download-file', [$meeting, $file]) }}" 
-                                           class="btn btn-sm btn-outline-primary">
+                                        <a href="{{ route('meetings.files.preview', [$meeting, $file]) }}" target="_blank"
+                                           class="btn btn-sm btn-outline-info" title="Lihat/Preview">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ route('meetings.files.download', [$meeting, $file]) }}" 
+                                           class="btn btn-sm btn-outline-primary" title="Download">
                                             <i class="fas fa-download"></i>
                                         </a>
                                         
                                         @if($file->uploaded_by == auth()->id() || auth()->user()->canManageMeetings() || $meeting->organizer_id == auth()->id())
-                                        <form action="{{ route('meetings.delete-file', [$meeting, $file]) }}" method="POST" class="d-inline">
+                                        <form action="{{ route('meetings.files.delete', [$meeting, $file]) }}" method="POST" class="d-inline">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-sm btn-outline-danger" 
@@ -870,7 +874,7 @@
                     <span>&times;</span>
                 </button>
             </div>
-            <form action="{{ route('meetings.upload-file', $meeting) }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ route('meetings.files.upload', $meeting) }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <div class="modal-body">
                     <div class="form-group">

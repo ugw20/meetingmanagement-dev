@@ -208,6 +208,9 @@
                                 </div>
                             </div>
                             <div>
+                                <a href="{{ route('action-items.preview-file', [$actionItem, $file]) }}" target="_blank" class="btn btn-info btn-sm mr-1" title="Lihat/Preview">
+                                    <i class="fas fa-eye"></i>
+                                </a>
                                 <a href="{{ route('action-items.download-file', [$actionItem, $file]) }}" class="btn btn-success btn-sm" title="Download">
                                     <i class="fas fa-download"></i>
                                 </a>

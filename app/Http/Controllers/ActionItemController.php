@@ -9,6 +9,7 @@ use App\Models\Department;
 use Illuminate\Http\Request;
 use App\Models\ActionItemFile;
 use Illuminate\Support\Facades\Storage;
+use App\Notifications\MeetingNotification;
 
 class ActionItemController extends Controller
 {
@@ -134,10 +135,23 @@ class ActionItemController extends Controller
         $validated['meeting_id'] = $meeting->id;
         $validated['status'] = 'pending';
 
-        ActionItem::create($validated);
+        $actionItem = ActionItem::create($validated);
+        
+        // Notify the Assignee
+        // Make sure to load the relationship if needed, or query the user
+        $assignee = User::find($validated['assigned_to']);
+        if ($assignee) {
+            $assignee->notify(new MeetingNotification(
+                'Tugas Baru: ' . $actionItem->title,
+                "Anda ditugaskan tindak lanjut baru dari meeting: {$meeting->title}",
+                route('action-items.show', $actionItem),
+                'fa-tasks',
+                'text-warning'
+            ));
+        }
 
         return redirect()->route('meetings.show', $meeting)
-            ->with('success', 'Tindak lanjut berhasil ditambahkan.');
+            ->with('success', 'Tindak lanjut berhasil ditambahkan dan notifikasi telah dikirim.');
     }
 
     public function show(ActionItem $actionItem)
@@ -380,6 +394,45 @@ class ActionItemController extends Controller
         }
 
         return Storage::disk('public')->download($file->file_path, $file->file_name);
+    }
+
+    public function previewFile(ActionItem $actionItem, ActionItemFile $file)
+    {
+        // Validasi bahwa file ini milik action item yang dimaksud
+        if ($file->action_item_id !== $actionItem->id) {
+            abort(404);
+        }
+
+        $path = storage_path('app/public/' . $file->file_path);
+        
+        $path = storage_path('app/public/' . $file->file_path);
+        
+        if (!file_exists($path)) {
+            abort(404);
+        }
+        
+        $mimeType = $file->file_type;
+        $extension = strtolower(pathinfo($file->file_name, PATHINFO_EXTENSION));
+        
+        // Paksa deteksi ext jika tipe di DB adalah octet-stream atau null  
+        if (empty($mimeType) || $mimeType === 'application/octet-stream') {
+            if ($extension === 'pdf') {
+                $mimeType = 'application/pdf';
+            } elseif (in_array($extension, ['jpg', 'jpeg'])) {
+                $mimeType = 'image/jpeg';
+            } elseif (in_array($extension, ['png', 'gif', 'webp'])) {
+                $mimeType = 'image/' . $extension;
+            } else {
+                $mimeType = 'application/octet-stream';
+            }
+        }
+
+        // Gunakan file_type dari database karena file di disk mungkin tidak punya ekstensi
+        // dan response()->file() dari Laravel akan me-override MIME type menjadi octet-stream
+        return response()->make(file_get_contents($path), 200, [
+            'Content-Type' => $mimeType,
+            'Content-Disposition' => 'inline; filename="' . $file->file_name . '"'
+        ]);
     }
 
     public function deleteFile(ActionItem $actionItem, ActionItemFile $file)
