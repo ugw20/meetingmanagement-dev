@@ -889,7 +889,7 @@
 </div>
 
 <!-- Modals -->
-@if($meeting->status === 'completed' && $meeting->organizer_id == auth()->id())
+@if((auth()->user()->canManageMeetings() || $meeting->organizer_id == auth()->id() || $meeting->assigned_action_taker_id == auth()->id()) && in_array($meeting->status, ['scheduled', 'ongoing', 'completed']))
 <!-- Add Action Item Modal -->
 <div class="modal fade" id="addActionItemModal" tabindex="-1">
     <div class="modal-dialog modal-lg">

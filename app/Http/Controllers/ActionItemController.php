@@ -9,6 +9,11 @@ use App\Models\Department;
 use Illuminate\Http\Request;
 use App\Models\ActionItemFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\ActionItemReviewRequested;
+use App\Mail\ActionItemVerified;
+use App\Mail\ActionItemRevisionRequested;
+use App\Mail\ActionItemUpdated;
 
 class ActionItemController extends Controller
 {
@@ -196,8 +201,23 @@ class ActionItemController extends Controller
 
         $actionItem->update($validated);
 
+        // Kirim notifikasi email ke penanggung jawab
+        $user = User::find($validated['assigned_to']);
+        if ($user) {
+            try {
+                Mail::to($user->email)->send(new ActionItemUpdated(
+                    $actionItem, 
+                    $user, 
+                    auth()->user()->name, 
+                    auth()->user()->email
+                ));
+            } catch (\Exception $e) {
+                \Log::error('Gagal kirim email update action item: ' . $e->getMessage());
+            }
+        }
+
         return redirect()->route('action-items.show', $actionItem)
-            ->with('success', 'Tindak lanjut berhasil diperbarui.');
+            ->with('success', 'Tindak lanjut berhasil diperbarui dan notifikasi email telah dikirim.');
     }
 
     public function updateStatus(Request $request, ActionItem $actionItem)
@@ -238,10 +258,46 @@ class ActionItemController extends Controller
             $validated['completed_at'] = now();
         }
 
+        // Deteksi transisi status sebelum update
+        $prevStatus         = $actionItem->status;
+        $isNewWaitingReview = $validated['status'] === 'waiting_review' && $prevStatus !== 'waiting_review';
+        $isNewCompleted     = $validated['status'] === 'completed'      && $prevStatus !== 'completed';
+        $isNewRevision      = $validated['status'] === 'needs_revision'  && $prevStatus !== 'needs_revision';
+
         $actionItem->update($validated);
 
+        $hasMeeting   = isset($actionItem->meeting) && $actionItem->meeting;
+        $hasOrganizer = $hasMeeting && $actionItem->meeting->organizer;
+        $hasAssignee  = $actionItem->assignedTo;
+        $currentUser  = auth()->user();
+
+        try {
+            // 1. Assignee lapor selesai → notif ke organizer
+            if ($isNewWaitingReview && $hasOrganizer) {
+                $organizer = $actionItem->meeting->organizer;
+                $files     = $actionItem->files()->with('uploader')->get();
+                Mail::to($organizer->email)
+                    ->queue(new ActionItemReviewRequested($actionItem, $organizer, $currentUser, $files));
+            }
+
+            // 2. Organizer verifikasi → notif ke assignee
+            if ($isNewCompleted && $hasAssignee && $hasOrganizer) {
+                Mail::to($actionItem->assignedTo->email)
+                    ->queue(new ActionItemVerified($actionItem, $actionItem->assignedTo, $actionItem->meeting->organizer));
+            }
+
+            // 3. Organizer tolak/minta revisi → notif ke assignee
+            if ($isNewRevision && $hasAssignee && $hasOrganizer) {
+                $notes = $validated['revision_notes'] ?? '-';
+                Mail::to($actionItem->assignedTo->email)
+                    ->queue(new ActionItemRevisionRequested($actionItem, $actionItem->assignedTo, $actionItem->meeting->organizer, $notes));
+            }
+        } catch (\Exception $e) {
+            \Log::warning('Gagal kirim email notifikasi action item: ' . $e->getMessage());
+        }
+
         return redirect()->back()
-            ->with('success', 'Status tindak lanjut berhasil diperbarui.');
+            ->with('success', 'Status tindak lanjut berhasil diperbarui. Notifikasi email telah dikirim.');
     }
 
     public function destroy(ActionItem $actionItem)

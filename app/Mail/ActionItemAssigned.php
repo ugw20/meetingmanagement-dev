@@ -18,17 +18,22 @@ class ActionItemAssigned extends Mailable implements ShouldQueue
     public $actionItem;
     public $participant;
     public $meeting;
+    public $senderName;
+    public $senderEmail;
 
-    public function __construct(ActionItem $actionItem, User $participant)
+    public function __construct(ActionItem $actionItem, User $participant, $senderName = null, $senderEmail = null)
     {
         $this->actionItem = $actionItem;
         $this->participant = $participant;
         $this->meeting = $actionItem->meeting;
+        $this->senderName = $senderName ?? config('mail.from.name');
+        $this->senderEmail = $senderEmail ?? config('mail.from.address');
     }
 
     public function envelope(): Envelope
     {
         return new Envelope(
+            from: new \Illuminate\Mail\Mailables\Address($this->senderEmail, $this->senderName),
             subject: 'Tugas Baru: ' . $this->actionItem->title,
         );
     }
