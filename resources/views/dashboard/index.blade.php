@@ -388,8 +388,11 @@
                 dateClick: function(info) {
                     const dateStr = info.dateStr;
                     const events = calendar.getEvents().filter(event => {
-                        const eventDate = event.start.toISOString().split('T')[0];
-                        return eventDate === dateStr;
+                        const d = event.start;
+                        const localDate = d.getFullYear() + '-' +
+                            String(d.getMonth() + 1).padStart(2, '0') + '-' +
+                            String(d.getDate()).padStart(2, '0');
+                        return localDate === dateStr;
                     });
 
                     showDailyInfo(dateStr, events);
